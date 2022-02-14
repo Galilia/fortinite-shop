@@ -1,46 +1,115 @@
-import React, {useEffect, useState} from "react";
-import {Movies} from '../components/Movies';
-import {Preloader} from "../components/Preloader";
-import Search from "../components/Search";
+import {useEffect, useState} from "react";
+import {API_KEY, API_URL} from "../config";
+import {Preloader} from "./Preloader";
+import {GoodsList} from "./GoodsList";
+import {Cart} from "./Cart";
+import {BasketList} from "./BasketList";
+import {Alert} from "./Alert";
 
-const API_KEY = process.env.REACT_APP_API_KEY;
 
-function Main() {
-
-  const [movies, setMovies] = useState([]);
+function Shop() {
+  const [goods, setGoods] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState([]);
+  const [isBasketShow, setBasketShow] = useState(false);
+  const [alertName, setAlertName] = useState('')
 
   useEffect(() => {
-    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=matrix`)
-      .then(repsonse => repsonse.json())
-      .then(data => {
-        setMovies(data.Search);
+    fetch(API_URL, {
+      headers: {
+        'Authorization': API_KEY,
+      },
+    }).then(response => response.json())
+      .then((data) => {
+        data.featured && setGoods(data.featured);
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      })
+      }).catch(e=>alert(e));;
   }, []);
 
-  const searchMovies = (str, type = 'all') => {
-    setLoading(true);
-    fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=${str}${type !== 'all' ? `&type=${type}` : ''}`)
-      .then(repsonse => repsonse.json())
-      .then(data => {
-        setMovies(data.Search);
-        setLoading(false);
+  const addToBasket = (item) => {
+    const itemIndex = order.findIndex((orderItem) => orderItem.id === item.id)
+    // Adding if no elements in basket
+    if (itemIndex < 0) {
+      const newItem = {
+        ...item,
+        quantity: 1
+      }
+      setOrder([...order, newItem])
+      // If there is an element in basket
+     } else {
+      const newOrder = order.map((orderItem, index) => {
+        // console.log('---setOrder2-->', order)
+        if (index === itemIndex) {
+          return {
+            ...orderItem,
+            quantity: orderItem.quantity + 1
+          }
+        } else {
+          return orderItem;
+        }
       })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      })
+
+      setOrder(newOrder);
+     }
+     setAlertName(item.name);
+  }
+
+  const removeFromBasket = (itemId) => {
+    const newOrder = order.filter(el => el.id !== itemId);
+    setOrder(newOrder);
+  }
+
+  const incQuantity = (itemId) => {
+    const newOrder = order.map(el => {
+      if (el.id === itemId) {
+        const newQuantity = el.quantity + 1;
+        return {
+          ...el,
+          quantity: newQuantity
+        }
+      } else {
+        return el;
+      }
+    })
+    setOrder(newOrder);
+  }
+
+  const decQuantity = (itemId) => {
+    const newOrder = order.map(el => {
+      if (el.id === itemId) {
+        const newQuantity = el.quantity - 1;
+        return {
+          ...el,
+          quantity: newQuantity >= 0 ? newQuantity : 0
+        }
+      } else {
+        return el;
+      }
+    })
+    setOrder(newOrder);
+  }
+
+  const handleBasketShow = () => {
+    setBasketShow(!isBasketShow);
+  }
+
+  const closeAlert = () => {
+    setAlertName('');
   }
 
   return <main className="container content">
-    <Search searchMovies={searchMovies}/>
-    { loading ? <Preloader /> : <Movies movies={movies}/> }
+    <Cart quantity={order.length} handleBasketShow={handleBasketShow}/>
+    { loading ? <Preloader /> : <GoodsList goods={goods} addToBasket={addToBasket}/>}
+    {
+      isBasketShow && <BasketList
+        order={order}
+        handleBasketShow={handleBasketShow}
+        removeFromBasket={removeFromBasket}
+        incQuantity={incQuantity}
+        decQuantity={decQuantity}
+      />}
+    { alertName && <Alert name={alertName} closeAlert={closeAlert} />}
   </main>
 }
 
-export { Main }
+export {Shop};
