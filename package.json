@@ -1,6 +1,6 @@
 {
   "name": "fortinite-shop",
-  "home": "https://galilia.github.io/fortinite-shop",
+  "homepage": "https://galilia.github.io/fortinite-shop",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
